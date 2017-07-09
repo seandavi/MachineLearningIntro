@@ -2,24 +2,74 @@
 title: "Machine Learning"
 author: "Sean Davis"
 date: "June 29, 2015"
-output: html_document
+output: ioslides_presentation
 ---
 
 # Preliminaries
 
-Install required libraries.
+## Install required libraries.
 
 ```{r echo=FALSE,results='hide'}
 library(knitr)
-opts_chunk$set(warning=FALSE,message=FALSE,fig.width=9,fig.height=6)
+options(width=60)
+opts_chunk$set(tidy=TRUE,warning=FALSE,message=FALSE,fig.width=9,fig.height=6, cache=TRUE)
 ```
 
-```{r}
+```{r eval=FALSE}
 library(BiocInstaller)
-#biocLite(c('mlbench','adabag','randomForest','party','mboost'))
+biocLite(c('mlbench','adabag', 'randomForest', 'party', 'mboost', 'rpart.plot'))
 ```
 
 
+# Overview
+
+## What is machine learning?
+
+Machine learning is a broad set of fields related to computers learning from "experience" (data). 
+
+- Focusing on *predictive modeling* with a goal of *producing the most accurate estimates of some quantity or the most likely output of an event*. 
+- These models are sometimes based on similar models for inference (testing against a null hypothesis, such as linear regression), but in many cases, predictive models are not well-suited for inference (think k-nearest-neighbor, for example). 
+
+## The formula interface
+
+```{r eval=FALSE}
+outcome ~ var1 + var2 + ...
+```
+
+The variable `outcome` is predicted by `var1, var2, ...`
+
+```{r eval=FALSE}
+some_model_function(price ~ numBedrooms + numBaths + acres,
+                 data = housingData)
+```
+
+Conveniences of the formula interface:
+
+- Transformations such as `log10(acres)` can be specified inline. 
+- Factors are converted into dummy variables automatically.
+
+## The Non-formula interface
+
+- The non-formula interface specifies the predictors as a matrix or data frame. 
+- The outcome data are then passed into the model as a vector.
+
+```{r eval=FALSE}
+some_model_function(x = housePredictors, y = price)
+```
+
+Many R functions offer both a formula and a non-formula interface, but not all.
+
+## General workflow for machine learning in R
+
+1. Fit the model to a set of training data
+    ```{r eval=FALSE}
+    fit <- knn(trainingData, outcome, k = 5)
+    ```
+2. Assess the properties of the model using `print`, `plot`, `summary` or other methods
+3. Predict outcomes for samples using the predict method:
+    ```{r eval=FALSE}
+    predict(fit, newSamples).
+    ```
 
 
 ## Classification Trees
@@ -27,11 +77,21 @@ library(BiocInstaller)
 As a simple dataset to try with machine learning, we are going to predict the species of 
 `iris` based on four measurements.
 
-```{r}
+```{r eval=FALSE}
 data(iris)
 View(iris)
 pairs(iris[,1:4],col=iris$Species)
 ```
+
+## Iris Data
+
+```{r echo=FALSE}
+data(iris)
+pairs(iris[,1:4],col=iris$Species)
+```
+
+
+## Another slide
 
 We can start with a simple learner, a [classification tree](https://en.wikipedia.org/wiki/Decision_tree_learning). This learner requires:
 
