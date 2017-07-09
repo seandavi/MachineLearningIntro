@@ -1,8 +1,12 @@
 ---
 title: "Machine Learning"
+subtitle: "A hands-on introduction using R"
 author: "Sean Davis"
-date: "June 29, 2015"
-output: ioslides_presentation
+date: "July 7, 2017"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    keep_md: true
 ---
 
 # Preliminaries
@@ -13,7 +17,7 @@ output: ioslides_presentation
 library(knitr)
 options(width=60)
 opts_chunk$set(tidy=TRUE,warning=FALSE,message=FALSE, cache=TRUE,
-               fig.width=9,fig.height=6)
+               fig.width=9,fig.height=5.5)
 ```
 
 ```{r eval=FALSE}
@@ -24,6 +28,11 @@ biocLite(c('mlbench','adabag', 'e1071', 'randomForest', 'party', 'mboost', 'rpar
 ```{r}
 require(c('mlbench','adabag', 'e1071', 'randomForest', 'party', 'mboost', 'rpart.plot', 'formatR'))
 ```
+
+### Some links of interest
+
+- [caret](https://https://cran.r-project.org/package=caret), [party](https://cran.r-project.org/package=party), [randomForest](https://cran.r-project.org/package=randomForest), [mlbench](https://cran.r-project.org/package=mlbench), [mlr](https://cran.r-project.org/package=mlr)
+- [Max Kuhn's old machine learning tutorial](https://www.r-project.org/conferences/useR-2013/Tutorials/kuhn/user_caret_2up.pdf)
 
 # Overview
 
@@ -78,7 +87,7 @@ Many R functions offer both a formula and a non-formula interface, but not all.
 # Exercise 1
 Playing with regression
 
-## Is `mpg` a function of `wt`?
+## Is `mpg` a function of `wt`? {.smaller}
 
 The formula interface in action:
 
@@ -148,11 +157,83 @@ rss
 anova(fit)
 ```
 
-## Quantifying "goodness-of-fit"
+## Training versus testing
+
+- What did we do wrong in quantifying our "goodness-of-fit"?
+
+# Splitting data and model performance evaluation
+
+
+## Common steps during training
+
+- estimating model parameters (i.e. training models)
+- determining the values of tuning parameters that cannot be directly calculated from the data
+- calculating the performance of the final model that will generalize to new data
+
+## Spending the data to find an optimal model? 
+
+- Split data into training and test data sets
+- *Training Set*: these data are used to estimate model parameters and
+to pick the values of the complexity parameter(s) for the model.
+- *Test Set (aka validation set)*: these data can be used to get an independent assessment of model accuracy. The test data should never be used in any aspect of model training.
+
+## Tradeoffs in spending data
+
+The more data we spend, the better estimates we’ll get (provided the data is accurate). Given a fixed amount of dat:
+
+- Too much spent in training won’t allow us to get a good assessment of predictive performance. We may find a model that fits the training data very well, but is not generalizable (over–fitting)
+- Too much spent in testing won’t allow us to get a good assessment of
+model parameters
+
+Statistically, the best course of action would be to use all the data for
+model building and use statistical methods to get good estimates of error, but from a non–statistical perspective, many consumers of of these models
+emphasize the need for an untouched set of samples the evaluate
+performance.
+
+## Example using `mtcars`
+
+Using 50% of the data for training and 50% for testing is a place to start.
 
 ```{r}
+set.seed(1)
+trainIdx = sample(1:nrow(mtcars),16)
+trainDat = mtcars[trainIdx,]
+testDat  = mtcars[-trainIdx,]
+```
+
+## Train the model using the training data
+
+```{r}
+fit = lm(mpg ~ wt, data=trainDat)
 anova(fit)
 ```
+
+## Train the model using the training data
+
+```{r echo=FALSE}
+plot(mpg ~ wt, data = trainDat)
+abline(fit)
+```
+
+## Test our model using the testing data
+
+```{r}
+pred_mpg = predict(fit,testDat)
+rss = sum((testDat$mpg - pred_mpg)^2)
+rss
+anova(fit)
+```
+
+## Test our model using the testing data
+
+```{r echo=FALSE}
+plot(mpg ~ wt, data = testDat)
+points(testDat$wt,pred_mpg,col='red')
+abline(fit)
+```
+
+# Example 2
+A classification example
 
 ## Classification Trees
 
@@ -185,15 +266,27 @@ We can start with a simple learner, a [classification tree](https://en.wikipedia
 3. For each resulting group, repeat step 2 until all remaining groups have only one class in them.
 4. Optionally, "prune" the tree to keep only splits that are "statistically significant".
 
+## Learning the model
+
 The `party` package includes a function, `ctree` to "learn" a tree from data.
 
-```{r}
+```{r eval=FALSE}
 library(party)
 x = ctree(Species ~ .,data=iris)
 plot(x)
 ```
 
-And how well does our tree do with predicting the original classes from the data?
+## Learning the model
+
+```{r echo=FALSE}
+library(party)
+x = ctree(Species ~ .,data=iris)
+plot(x)
+```
+
+
+
+## Checking the model
 
 ```{r}
 library(caret)
@@ -203,64 +296,159 @@ table(prediction)
 confusionMatrix(iris$Species,prediction)
 ```
 
-What is the problem with what we just did to determine our prediction accurace?  
+## Data splitting, take 2
 
+What is the problem with what we just did to determine our prediction accuracy?  
 To deal with this problem, we can split the dataset into a "training" set and then check
 our prediction on the other piece of the data, the "test" set.
 
 ```{r}
-# choose every "odd" row for training
 set.seed(42)
 trainIdx = sample(c(TRUE,FALSE),size=nrow(iris),prob=c(0.2,0.8),replace=TRUE)
 irisTrain = iris[trainIdx,]
-# choose every "even" row for testing
 irisTest  = iris[!trainIdx,]
+nrow(irisTrain)
+nrow(irisTest)
 ```
 
-Now, we can "train" our tree on the "training" set.
+## "train" our tree on the "training" set.
 
-```{r}
+```{r eval=TRUE}
 trainTree = ctree(Species ~ ., data = irisTrain)
 plot(trainTree)
 ```
 
+## "train" our tree on the "training" set.
+
+```{r echo=FALSE}
+trainTree = ctree(Species ~ ., data = irisTrain)
+plot(trainTree)
+```
+
+## Test our predictions on the "training" data
+
 And how does our `trainTree` do at predicting the original classes in the "training" data?
 
-```{r}
-library(caret)
+```{r eval=FALSE}
 trainPred = predict(trainTree,irisTrain)
 confusionMatrix(irisTrain$Species,trainPred)
 ```
 
+##  Test our predictions on the "training" data
+
+```{r echo=FALSE}
+trainPred = predict(trainTree,irisTrain)
+confusionMatrix(irisTrain$Species,trainPred)
+```
+
+## Test our predictions on the "testing" data
+
 How is our prediction performance now on the "test" data?
 
-```{r}
+```{r eval=FALSE}
 testPred = predict(trainTree,irisTest)
 confusionMatrix(irisTest$Species,testPred)
 ```
 
-Now, let's make this harder. We will now look at a dataset that is designed to "foil" 
-tree classifiers.
+## Test our predictions on the "testing" data
 
-```{r}
+```{r echo=FALSE}
+testPred = predict(trainTree,irisTest)
+confusionMatrix(irisTest$Species,testPred)
+```
+
+# Example 3
+k-nearest neighbor and cross-validation
+
+## k-nearest-neighbor
+
+Now, let's make this harder. We will now look at a dataset that is designed to "foil" classifiers. 
+
+```{r eval=FALSE}
 library(mlbench)
+set.seed(1)
 spiral = mlbench.spirals(1000,sd=0.1)
 spiral = data.frame(x=spiral$x[,1],y=spiral$x[,2],class=factor(spiral$classes))
 library(ggplot2)
 ggplot(spiral,aes(x,y,color=class)) + geom_point()
 ```
 
+## k-nearest-neighbor
 
+```{r echo=FALSE}
+library(mlbench)
+set.seed(1)
+spiral = mlbench.spirals(1000,sd=0.1)
+spiral = data.frame(x=spiral$x[,1],y=spiral$x[,2],class=factor(spiral$classes))
+library(ggplot2)
+ggplot(spiral,aes(x,y,color=class)) + geom_point()
+```
+
+## Without splitting data
+
+```{r}
+library(caret)
+fit = knn3(class ~ ., data=spiral)
+confusionMatrix(predict(fit,spiral,type='class'),spiral$class)
+```
+
+## Cross-validation
+
+setup
+
+```{r}
+library(caret)
+indxTrain <- createDataPartition(y = spiral$class,p = 0.75,list = FALSE)
+training <- spiral[indxTrain,]
+testing <- spiral[-indxTrain,]
+ctrl <- trainControl(method="repeatedcv",repeats = 3)
+knnFit <- train(class ~ ., data = training, method = "knn", trControl = ctrl, tuneLength = 10)
+```
+
+## Cross-validation {.smaller}
+
+```{r echo=FALSE}
+knnFit
+```
+
+# Exercise 4
+Ensembles of learners
+
+## What is an ensemble of learners?
+
+In some cases, a machine learning algorithm can have limited predictive power, but using multiple "instances" of such *weak learners* in combination can produce a good result.
+
+It is probably obvious that a classification tree approach might be problematic for a dataset like the `spiral` dataset. In this example, we are going to use "boosting" to combine many trees, each with minimal prediction capabilities, into an "ensemble" learner with reasonable good prediction capabilities.
+
+## Using trees to predict on the `spiral` dataset
 
 ```{r}
 library(formatR)
+library(party)
 trainIdx = sample(c(TRUE,FALSE),nrow(spiral),replace=TRUE,prob=c(0.5,0.5))
 spiralTrain = spiral[trainIdx,]
 trainTree   = ctree(class ~ .,spiralTrain)
+```
+
+## Using trees to predict on the `spiral` dataset
+
+
+```{r echo=FALSE}
 plot(trainTree)
+```
+
+## Using trees to predict on the `spiral` dataset {.smaller}
+
+Training Data
+
+```{r}
 prediction = predict(trainTree,spiralTrain)
 confusionMatrix(spiralTrain$class,prediction)
 ```
+
+## Using trees to predict on the `spiral` dataset {.smaller}
+
+Testing data
 
 ```{r}
 spiralTest = spiral[!trainIdx,]
@@ -268,23 +456,30 @@ prediction = predict(trainTree,spiralTest)
 confusionMatrix(spiralTest$class,prediction)
 ```
 
+## Using trees to predict on the `spiral` dataset 
+
 Many trees have similar prediction capability, but each is really bad.  This is a 
 characteristic of a "weak learner".  Here, we see that in action by performing a bootstrap
 sampling (resample with replacement), train, plot, and check prediction accuracy.
+
+## Using trees to predict on the `spiral` dataset
+
+Must be run "locally" to see effect.
 
 ```{r}
 plotBootSample = function(spiral) {
   trainIdx = sample(1:nrow(spiral),replace=TRUE)
   spiralTrain = spiral[trainIdx,]
-  trainTree   = ctree(class ~ .,spiralTrain,ctree_control(minsplit=2,maxsplit=2))
+  trainTree   = ctree(class ~ .,spiralTrain)
   plot(trainTree)
-  prediction = predict(trainTree,spiral[!trainIdx,])
-  print(confusionMatrix(spiralTrain$class,prediction)$overall['Accuracy'])
+  spiralTest = spiral[-trainIdx,]
+  prediction = predict(trainTree,spiralTest)
+  print(confusionMatrix(spiralTest$class,prediction)$overall['Accuracy'])
 }
 ```
 
 ```{r eval=FALSE}
-# press 'ESC' to stop
+# press 'ESC' or 'ctrl-c' to stop
 while(TRUE) {
   par(ask=TRUE)
   plotBootSample(spiral)
@@ -293,7 +488,7 @@ while(TRUE) {
 
 ## Boosting
 
-We can "combine" a bunch of "weak learners", giving more "weight" to hard-to-classify observations as we build each new classifier.  In this case, we will be using the same classification tree again.
+We can "combine" a bunch of "weak learners", giving more "weight" to hard-to-classify observations as we build each new classifier.  In this case, we will be using the same classification tree approach again.
 
 ```{r}
 library(adabag)
@@ -301,24 +496,43 @@ trainIdx      = sample(c(TRUE,FALSE),nrow(spiral),replace=TRUE,prob=c(0.5,0.5))
 spiralTrain   = spiral[trainIdx,]
 boostTree     = boosting(class ~ x + y,data = spiralTrain,control = rpart.control(maxdepth=2))
 prediction    = predict(boostTree,spiralTrain)
+```
+
+## Boosting results {.smaller}
+
+```{r echo=FALSE}
 confusionMatrix(spiralTrain$class,prediction$class)
 ```
 
-```{r fig.width=9,fig.height=9}
+## A few trees from our ensemble
+
+```{r echo=FALSE}
 library(rpart.plot)
-par(mfrow=c(3,3),ask=FALSE)
-for(i in 1:9) {
+par(mfrow=c(2,3),ask=FALSE)
+for(i in 1:6) {
   rpart.plot(boostTree$trees[[i]])
 }
 ```
 
-And how does our boosted tree work on the test data?
+## Boosted trees on test data
 
-```{r}
+```{r eval=FALSE}
 spiralTest = spiral[!trainIdx,]
 prediction = predict(boostTree,spiralTest)
 confusionMatrix(spiralTest$class,prediction$class)
 ```
+
+## Boosted trees on test data
+
+```{r echo=FALSE}
+spiralTest = spiral[!trainIdx,]
+prediction = predict(boostTree,spiralTest)
+confusionMatrix(spiralTest$class,prediction$class)
+```
+
+
+# Exercise 5
+Random forests--ensembles to the max
 
 ## Random Forests
 
@@ -328,3 +542,10 @@ res = randomForest(Species ~ .,data=iris)
 res
 ```
 
+# sessionInfo
+
+## sessionInfo
+
+```{r echo=FALSE}
+sessionInfo()
+```
