@@ -12,14 +12,18 @@ output: ioslides_presentation
 ```{r echo=FALSE,results='hide'}
 library(knitr)
 options(width=60)
-opts_chunk$set(tidy=TRUE,warning=FALSE,message=FALSE,fig.width=9,fig.height=6, cache=TRUE)
+opts_chunk$set(tidy=TRUE,warning=FALSE,message=FALSE, cache=TRUE,
+               fig.width=9,fig.height=6)
 ```
 
 ```{r eval=FALSE}
 library(BiocInstaller)
-biocLite(c('mlbench','adabag', 'randomForest', 'party', 'mboost', 'rpart.plot'))
+biocLite(c('mlbench','adabag', 'e1071', 'randomForest', 'party', 'mboost', 'rpart.plot', 'formatR'))
 ```
 
+```{r}
+require(c('mlbench','adabag', 'e1071', 'randomForest', 'party', 'mboost', 'rpart.plot', 'formatR'))
+```
 
 # Overview
 
@@ -71,6 +75,84 @@ Many R functions offer both a formula and a non-formula interface, but not all.
     predict(fit, newSamples).
     ```
 
+# Exercise 1
+Playing with regression
+
+## Is `mpg` a function of `wt`?
+
+The formula interface in action:
+
+```{r}
+data(mtcars)
+fit = lm(mpg ~ wt, data = mtcars)
+summary(fit)
+```
+
+And make a plot.
+
+```{r eval=FALSE}
+plot(mpg ~ wt, data=mtcars)
+abline(fit)
+```
+
+## Is `mpg` a function of `wt`?
+
+```{r echo=FALSE}
+plot(mpg ~ wt, data=mtcars)
+abline(fit)
+```
+
+## Use `wt` to predict `mpg`
+
+And predict the original data based on the fitted model.
+
+```{r}
+pred_mpg = predict(fit,mtcars)
+summary(pred_mpg)
+```
+
+And look at the predicted values:
+
+```{R eval=FALSE}
+plot(mpg ~ wt, data=mtcars)
+abline(fit)
+points(y = pred_mpg, x = mtcars$wt, col='red')
+```
+
+## Use `wt` to predict `mpg`
+
+```{R echo=FALSE}
+plot(mpg ~ wt, data=mtcars)
+abline(fit)
+points(y = pred_mpg, x = mtcars$wt, col='red')
+```
+
+## Quantifying "goodness-of-fit"
+
+```{R echo=FALSE}
+plot(mpg ~ wt, data=mtcars)
+abline(fit)
+points(y = pred_mpg, x = mtcars$wt, col='red')
+```
+
+## Quantifying "goodness-of-fit"
+
+- Residual Sum of Squares
+    $$ RSS = \sum_{N} (y_i - f(x_i))^{2} $$
+
+## Quantifying "goodness-of-fit"
+
+```{r}
+rss = sum((mtcars$mpg - predict(fit,mtcars))^2)
+rss
+anova(fit)
+```
+
+## Quantifying "goodness-of-fit"
+
+```{r}
+anova(fit)
+```
 
 ## Classification Trees
 
@@ -115,6 +197,7 @@ And how well does our tree do with predicting the original classes from the data
 
 ```{r}
 library(caret)
+library(e1071)
 prediction = predict(x,iris)
 table(prediction)
 confusionMatrix(iris$Species,prediction)
@@ -170,6 +253,7 @@ ggplot(spiral,aes(x,y,color=class)) + geom_point()
 
 
 ```{r}
+library(formatR)
 trainIdx = sample(c(TRUE,FALSE),nrow(spiral),replace=TRUE,prob=c(0.5,0.5))
 spiralTrain = spiral[trainIdx,]
 trainTree   = ctree(class ~ .,spiralTrain)
