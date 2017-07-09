@@ -1,6 +1,6 @@
 # MachineLearningIntro
 
-Machine learning use cases for teaching
+Simple use cases for teaching machine learning in R
 
 ## Rendered version
 
