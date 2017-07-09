@@ -1,0 +1,186 @@
+---
+title: "Machine Learning"
+author: "Sean Davis"
+date: "June 29, 2015"
+output: html_document
+---
+
+# Preliminaries
+
+Install required libraries.
+
+```{r echo=FALSE,results='hide'}
+library(knitr)
+opts_chunk$set(warning=FALSE,message=FALSE,fig.width=9,fig.height=6)
+```
+
+```{r}
+library(BiocInstaller)
+#biocLite(c('mlbench','adabag','randomForest','party','mboost'))
+```
+
+
+
+
+## Classification Trees
+
+As a simple dataset to try with machine learning, we are going to predict the species of 
+`iris` based on four measurements.
+
+```{r}
+data(iris)
+View(iris)
+pairs(iris[,1:4],col=iris$Species)
+```
+
+We can start with a simple learner, a [classification tree](https://en.wikipedia.org/wiki/Decision_tree_learning). This learner requires:
+
+- A known class for each observation
+- A set of "features" that will serve a potential predictors
+
+1. Start with whole dataset.
+2. Choose features one-at-a-time and look for a value of each variable that ends up with the most homogeneous two groups after splitting on that variable/value.
+3. For each resulting group, repeat step 2 until all remaining groups have only one class in them.
+4. Optionally, "prune" the tree to keep only splits that are "statistically significant".
+
+The `party` package includes a function, `ctree` to "learn" a tree from data.
+
+```{r}
+library(party)
+x = ctree(Species ~ .,data=iris)
+plot(x)
+```
+
+And how well does our tree do with predicting the original classes from the data?
+
+```{r}
+library(caret)
+prediction = predict(x,iris)
+table(prediction)
+confusionMatrix(iris$Species,prediction)
+```
+
+What is the problem with what we just did to determine our prediction accurace?  
+
+To deal with this problem, we can split the dataset into a "training" set and then check
+our prediction on the other piece of the data, the "test" set.
+
+```{r}
+# choose every "odd" row for training
+set.seed(42)
+trainIdx = sample(c(TRUE,FALSE),size=nrow(iris),prob=c(0.2,0.8),replace=TRUE)
+irisTrain = iris[trainIdx,]
+# choose every "even" row for testing
+irisTest  = iris[!trainIdx,]
+```
+
+Now, we can "train" our tree on the "training" set.
+
+```{r}
+trainTree = ctree(Species ~ ., data = irisTrain)
+plot(trainTree)
+```
+
+And how does our `trainTree` do at predicting the original classes in the "training" data?
+
+```{r}
+library(caret)
+trainPred = predict(trainTree,irisTrain)
+confusionMatrix(irisTrain$Species,trainPred)
+```
+
+How is our prediction performance now on the "test" data?
+
+```{r}
+testPred = predict(trainTree,irisTest)
+confusionMatrix(irisTest$Species,testPred)
+```
+
+Now, let's make this harder. We will now look at a dataset that is designed to "foil" 
+tree classifiers.
+
+```{r}
+library(mlbench)
+spiral = mlbench.spirals(1000,sd=0.1)
+spiral = data.frame(x=spiral$x[,1],y=spiral$x[,2],class=factor(spiral$classes))
+library(ggplot2)
+ggplot(spiral,aes(x,y,color=class)) + geom_point()
+```
+
+
+
+```{r}
+trainIdx = sample(c(TRUE,FALSE),nrow(spiral),replace=TRUE,prob=c(0.5,0.5))
+spiralTrain = spiral[trainIdx,]
+trainTree   = ctree(class ~ .,spiralTrain)
+plot(trainTree)
+prediction = predict(trainTree,spiralTrain)
+confusionMatrix(spiralTrain$class,prediction)
+```
+
+```{r}
+spiralTest = spiral[!trainIdx,]
+prediction = predict(trainTree,spiralTest)
+confusionMatrix(spiralTest$class,prediction)
+```
+
+Many trees have similar prediction capability, but each is really bad.  This is a 
+characteristic of a "weak learner".  Here, we see that in action by performing a bootstrap
+sampling (resample with replacement), train, plot, and check prediction accuracy.
+
+```{r}
+plotBootSample = function(spiral) {
+  trainIdx = sample(1:nrow(spiral),replace=TRUE)
+  spiralTrain = spiral[trainIdx,]
+  trainTree   = ctree(class ~ .,spiralTrain,ctree_control(minsplit=2,maxsplit=2))
+  plot(trainTree)
+  prediction = predict(trainTree,spiral[!trainIdx,])
+  print(confusionMatrix(spiralTrain$class,prediction)$overall['Accuracy'])
+}
+```
+
+```{r eval=FALSE}
+# press 'ESC' to stop
+while(TRUE) {
+  par(ask=TRUE)
+  plotBootSample(spiral)
+}
+```
+
+## Boosting
+
+We can "combine" a bunch of "weak learners", giving more "weight" to hard-to-classify observations as we build each new classifier.  In this case, we will be using the same classification tree again.
+
+```{r}
+library(adabag)
+trainIdx      = sample(c(TRUE,FALSE),nrow(spiral),replace=TRUE,prob=c(0.5,0.5))
+spiralTrain   = spiral[trainIdx,]
+boostTree     = boosting(class ~ x + y,data = spiralTrain,control = rpart.control(maxdepth=2))
+prediction    = predict(boostTree,spiralTrain)
+confusionMatrix(spiralTrain$class,prediction$class)
+```
+
+```{r fig.width=9,fig.height=9}
+library(rpart.plot)
+par(mfrow=c(3,3),ask=FALSE)
+for(i in 1:9) {
+  rpart.plot(boostTree$trees[[i]])
+}
+```
+
+And how does our boosted tree work on the test data?
+
+```{r}
+spiralTest = spiral[!trainIdx,]
+prediction = predict(boostTree,spiralTest)
+confusionMatrix(spiralTest$class,prediction$class)
+```
+
+## Random Forests
+
+```{r}
+library(randomForest)
+res = randomForest(Species ~ .,data=iris)
+res
+```
+
