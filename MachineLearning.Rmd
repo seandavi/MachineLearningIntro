@@ -4,10 +4,23 @@ subtitle: "A hands-on introduction using R"
 author: "Sean Davis"
 date: "July 7, 2017"
 output: 
-  ioslides_presentation:
+  revealjs::revealjs_presentation:
     widescreen: true
     keep_md: true
+    theme: solarized
 ---
+
+<style type="text/css">
+  .reveal p {
+    text-align: left;
+  }
+  .reveal ul {
+    display: block;
+  }
+  .reveal ol {
+    display: block;
+  }  
+</style>
 
 # Preliminaries
 
