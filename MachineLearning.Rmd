@@ -2,7 +2,6 @@
 title: "Machine Learning"
 subtitle: "A hands-on introduction using R"
 author: "Sean Davis"
-date: "July 7, 2017"
 output: 
   revealjs::revealjs_presentation:
     widescreen: true
