@@ -198,10 +198,6 @@ The more data we spend, the better estimates we’ll get (provided the data is a
 - Too much spent in testing won’t allow us to get a good assessment of
 model parameters
 
-Statistically, the best course of action would be to use all the data for
-model building and use statistical methods to get good estimates of error, but from a non–statistical perspective, many consumers of of these models
-emphasize the need for an untouched set of samples the evaluate
-performance.
 
 ## Example using `mtcars`
 
