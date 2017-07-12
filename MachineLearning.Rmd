@@ -6,7 +6,7 @@ output:
   revealjs::revealjs_presentation:
     widescreen: true
     keep_md: true
-    theme: black
+    theme: simple
     reveal_options:
       slideNumber: true
       previewLinks: true
